@@ -127,6 +127,65 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
+## Programmatic SEO (6,967 pages)
+
+InvoiceGPT generates thousands of public landing pages from two data files — no manual work per page.
+
+### Route structure
+
+```
+/gst-invoice                              ← hub (lists all 38 industries)
+/gst-invoice/medical-store                ← 1 page per industry
+/gst-invoice/medical-store/mumbai         ← 1 page per industry × city
+
+/guides                                   ← hub (lists all 9 guides)
+/guides/how-to-create-gst-invoice         ← 1 page per guide
+```
+
+**38 industries × 182 cities = 6,916 city+industry pages** — from two files.
+
+### Data files (`lib/seo/data/`)
+
+| File | Content |
+|------|---------|
+| `industries.ts` | 38 business types — each with unique pain points, benefits, FAQs |
+| `cities.ts` | 182 Indian cities with state, nearby cities, lat/lng |
+| `guides.ts` | 9 full GST guides with title, slug, sections, FAQs |
+
+### SEO infrastructure (`lib/seo/`)
+
+| File | Purpose |
+|------|---------|
+| `config.ts` | Site URL, name, pricing — one source of truth |
+| `metadata.ts` | Generates title, description, canonical, OG, Twitter for any page |
+| `structured-data.ts` | Generates JSON-LD schemas (Organization, FAQPage, BreadcrumbList, LocalBusiness, Article) |
+
+### SEO components (`components/seo/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `JsonLd.tsx` | Injects structured data into page `<head>` |
+| `Breadcrumbs.tsx` | "Home → GST Invoice → Medical Store → Mumbai" nav |
+
+### Adding content
+
+```
+New industry  → add one object to lib/seo/data/industries.ts
+               → 1 hub entry + 182 city pages auto-generate
+
+New city      → add one object to lib/seo/data/cities.ts
+               → 38 new industry+city pages auto-generate
+
+New guide     → add one object to lib/seo/data/guides.ts
+               → 1 guide page auto-generates
+```
+
+No template changes. No new routes. Just data.
+
+> When URLs exceed 50,000, switch to `generateSitemaps()` (pattern documented in `app/sitemap.ts`).
+
+---
+
 ## Key architectural notes
 
 **PDF generation is server-side.** `@react-pdf/renderer` has persistent issues when bundled for the browser in Next.js 15. All PDF rendering happens in `GET /api/invoices/[id]/pdf` using `renderToBuffer`, which streams the bytes back to the client. The `canvas` webpack alias prevents bundling errors from the optional canvas dependency.

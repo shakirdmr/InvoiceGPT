@@ -19,7 +19,7 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`bg-gray-200 rounded animate-pulse ${className ?? ""}`} />;
 }
 
-export function InvoiceDetailContent() {
+export function  isInvoiceDetailContent() {
   const { id } = useParams<{ id: string }>();
   const { data: invoice, isLoading: invLoading } = useInvoice(id);
   const { data: business, isLoading: bizLoading } = useBusiness();
