@@ -64,6 +64,9 @@ export const metadata: Metadata = {
     site: siteConfig.twitterHandle,
     images: [siteConfig.ogImage],
   },
+  verification: {
+    google: "BJNGOyVn5iH4at0pBq4KucZzLNoHt27lD9PHjeIUfwU",
+  },
   robots: {
     index: true,
     follow: true,
