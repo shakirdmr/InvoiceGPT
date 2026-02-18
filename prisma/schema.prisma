@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                 String     @id @default(cuid())
+  name               String?
+  email              String     @unique
+  emailVerified      DateTime?
+  image              String?
+  subscriptionStatus String     @default("trial") // trial | active | expired
+  trialInvoicesUsed  Int        @default(0)
+  razorpaySubId      String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  accounts           Account[]
+  sessions           Session[]
+  businesses         Business[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Business {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  gstin     String?
+  address   String?
+  city      String?
+  state     String?
+  pincode   String?
+  phone     String?
+  email     String?
+  logoUrl   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients   Client[]
+  invoices  Invoice[]
+}
+
+model Client {
+  id         String    @id @default(cuid())
+  businessId String
+  name       String
+  gstin      String?
+  phone      String?
+  email      String?
+  address    String?
+  city       String?
+  state      String?
+  pincode    String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  business   Business  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoices   Invoice[]
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  businessId    String
+  clientId      String?
+  invoiceNumber String
+  date          DateTime      @default(now())
+  dueDate       DateTime?
+  subtotal      Float
+  cgstTotal     Float         @default(0)
+  sgstTotal     Float         @default(0)
+  total         Float
+  notes         String?
+  status        String        @default("draft") // draft | sent | paid
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  items         InvoiceItem[]
+  business      Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client        Client?       @relation(fields: [clientId], references: [id])
+}
+
+model InvoiceItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Float
+  rate        Float
+  gstRate     Float   @default(18) // 0 | 5 | 12 | 18 | 28
+  amount      Float
+  cgst        Float   @default(0)
+  sgst        Float   @default(0)
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
