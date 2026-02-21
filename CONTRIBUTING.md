@@ -13,6 +13,6 @@
 ## 🔁 How to Submit
 1. Push to your branch  
 2. Open a Pull Request  
-3. Explain what your change does
+3. Explain what your change does (Need GOOD explination to accept your PR)
 
-Thanks for contributing!
+Thanks for contributing. Keep Smiling ☺!
