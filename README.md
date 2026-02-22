@@ -1,206 +1,139 @@
 # InvoiceGPT
 
-**GST invoice generation for Indian businesses.** Create, download, and manage tax-compliant invoices in under a minute.
+GST invoice generation for Indian businesses — create, download, and manage tax-compliant invoices in under a minute.
 
----
+## Tech Stack
 
-## What it does
-
-- **WYSIWYG invoice editor** — edit directly inside a document-style view. What you see is what downloads.
-- **Auto GST calculation** — CGST + SGST computed per line item at 0%, 5%, 12%, 18%, or 28%.
-- **PDF generation** — professional Tax Invoice PDF, server-rendered and downloaded instantly.
-- **Client management** — save clients, reuse their details on future invoices.
-- **Dashboard** — revenue stats, month-over-month charts, recent invoices.
-- **Subscription model** — 6 free invoices, then ₹199/mo (Basic) or ₹399/mo (Pro) via Razorpay.
-
----
-
-## Tech stack
-
-| Layer | Tool |
+| Layer | Technology |
 |---|---|
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS + shadcn/ui |
-| Auth | NextAuth.js v5 — Google OAuth, JWT sessions |
+| Auth | NextAuth.js v5 (Google OAuth, JWT) |
+| Database | PostgreSQL (Supabase) |
 | ORM | Prisma |
-| Database | Supabase (PostgreSQL) |
-| File storage | Supabase Storage (business logos) |
-| PDF | @react-pdf/renderer — server-side via API route |
+| Storage | Supabase Storage |
+| PDF | @react-pdf/renderer |
 | Charts | Recharts |
-| Payments | Razorpay subscriptions |
+| Payments | Razorpay |
 
----
+## Features
 
-## Project structure
+- **WYSIWYG Invoice Editor** — edit directly inside a document-style view with multiple line items, auto-generated invoice numbers, and client selection
+- **Auto GST Calculation** — CGST + SGST computed per line item at 0%, 5%, 12%, 18%, or 28%
+- **PDF Generation** — professional Tax Invoice PDF with GSTIN details, line-item tax breakdown, and total in words (Indian number system)
+- **Client Management** — save clients with GSTIN, address, and contact details for reuse across invoices
+- **Dashboard** — revenue stats, 6-month revenue chart, recent invoices at a glance
+- **Business Settings** — company profile, GSTIN, address, and logo upload with in-browser cropping
+- **Subscriptions** — 6 free invoices on trial, then paid plans via Razorpay
+- **Programmatic SEO** — 6,900+ auto-generated landing pages from industry and city data files
+- **Google OAuth** — one-click sign-in with JWT sessions (no DB round-trip on auth)
 
-```
-app/
-  page.tsx                    # Landing page
-  (app)/
-    dashboard/                # Stats + revenue chart
-    invoices/
-      new/                    # Create invoice (WYSIWYG editor)
-      [id]/                   # View invoice + download PDF
-    clients/                  # Client list
-    settings/                 # Business profile + logo
-  api/
-    business/                 # GET/PATCH business profile
-    invoices/
-      route.ts                # GET list, POST create
-      [id]/
-        route.ts              # GET single, PATCH status
-        pdf/route.tsx         # GET → generates + streams PDF
-    clients/                  # GET list, POST create
-    user/me/                  # GET subscription status
-    razorpay/                 # Subscription + webhook
+## Setup
 
-components/
-  invoice/
-    InvoiceForm.tsx           # WYSIWYG invoice editor
-    InvoiceActions.tsx        # Download PDF + Mark Paid buttons
-  dashboard/
-    InvoiceDetailContent.tsx  # Invoice detail page (client-side)
-    SettingsForm.tsx          # Business profile form
-  pdf/
-    InvoicePDF.tsx            # @react-pdf/renderer template
-
-lib/
-  auth.ts                     # NextAuth config (JWT strategy)
-  prisma.ts                   # Prisma client singleton
-  gst.ts                      # calcLineItem, calcInvoiceTotals, numberToWords
-  hooks.ts                    # SWR hooks: useBusiness, useClients, useInvoices…
-  razorpay.ts                 # TRIAL_INVOICE_LIMIT, plan IDs
-```
-
----
-
-## Local setup
-
-### 1. Clone and install
+### 1. Install
 
 ```bash
-git clone <repo>
+git clone <repo-url>
 cd InvoiceGPT
 npm install
 ```
 
-### 2. Environment variables
+### 2. Environment Variables
 
 Create `.env.local`:
 
 ```env
 # Database (Supabase)
-DATABASE_URL="postgresql://..."        # Pooler URL (for queries)
-DIRECT_URL="postgresql://..."          # Direct URL (for migrations)
+DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."
 
 # Auth
 NEXTAUTH_SECRET="..."
 AUTH_GOOGLE_ID="..."
 AUTH_GOOGLE_SECRET="..."
 
-# Supabase Storage (logo uploads)
+# Supabase Storage
 NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="..."
 
 # Razorpay
 RAZORPAY_KEY_ID="..."
 RAZORPAY_KEY_SECRET="..."
-RAZORPAY_PLAN_ID="..."                 # Pro plan (₹399/mo)
+RAZORPAY_PLAN_ID="..."
 RAZORPAY_WEBHOOK_SECRET="..."
 ```
 
 ### 3. Database
 
 ```bash
-npm run db:push       # Push schema to Supabase
-npm run db:generate   # Regenerate Prisma client
+npm run db:push        # Push schema to Supabase
+npm run db:generate    # Generate Prisma client
 ```
 
 ### 4. Run
 
 ```bash
-npm run dev
+npm run dev            # → http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## Programmatic SEO (6,967 pages)
-
-InvoiceGPT generates thousands of public landing pages from two data files — no manual work per page.
-
-### Route structure
+## Folder Structure
 
 ```
-/gst-invoice                              ← hub (lists all 38 industries)
-/gst-invoice/medical-store                ← 1 page per industry
-/gst-invoice/medical-store/mumbai         ← 1 page per industry × city
+app/
+├── (app)/                        # Authenticated routes
+│   ├── dashboard/                # Revenue stats + chart
+│   ├── invoices/new/             # WYSIWYG invoice editor
+│   ├── invoices/[id]/            # Invoice detail + PDF download
+│   ├── clients/                  # Client list + add
+│   └── settings/                 # Business profile + logo
+├── (marketing)/                  # Public SEO pages
+│   ├── gst-invoice/              # Industry + city landing pages
+│   └── guides/                   # GST guide articles
+├── api/
+│   ├── invoices/                 # CRUD + PDF generation
+│   ├── clients/                  # CRUD
+│   ├── business/                 # Profile endpoints
+│   ├── razorpay/                 # Subscription + webhook
+│   └── user/me/                  # Subscription status
+├── login/                        # Sign-in page
+├── onboarding/                   # First-time business setup
+└── subscribe/                    # Upgrade page
 
-/guides                                   ← hub (lists all 9 guides)
-/guides/how-to-create-gst-invoice         ← 1 page per guide
+components/
+├── invoice/                      # InvoiceForm, InvoiceActions
+├── dashboard/                    # App UI components
+├── pdf/                          # react-pdf invoice template
+├── seo/                          # JsonLd, Breadcrumbs
+└── ui/                           # shadcn/ui primitives
+
+lib/
+├── auth.ts                       # NextAuth config
+├── prisma.ts                     # Prisma client
+├── gst.ts                        # GST calculation + numberToWords
+├── hooks.ts                      # SWR data hooks
+├── razorpay.ts                   # Razorpay client + plan config
+├── supabase.ts                   # Storage client + logo upload
+└── seo/                          # Metadata, structured data, content
 ```
-
-**38 industries × 182 cities = 6,916 city+industry pages** — from two files.
-
-### Data files (`lib/seo/data/`)
-
-| File | Content |
-|------|---------|
-| `industries.ts` | 38 business types — each with unique pain points, benefits, FAQs |
-| `cities.ts` | 182 Indian cities with state, nearby cities, lat/lng |
-| `guides.ts` | 9 full GST guides with title, slug, sections, FAQs |
-
-### SEO infrastructure (`lib/seo/`)
-
-| File | Purpose |
-|------|---------|
-| `config.ts` | Site URL, name, pricing — one source of truth |
-| `metadata.ts` | Generates title, description, canonical, OG, Twitter for any page |
-| `structured-data.ts` | Generates JSON-LD schemas (Organization, FAQPage, BreadcrumbList, LocalBusiness, Article) |
-
-### SEO components (`components/seo/`)
-
-| Component | Purpose |
-|-----------|---------|
-| `JsonLd.tsx` | Injects structured data into page `<head>` |
-| `Breadcrumbs.tsx` | "Home → GST Invoice → Medical Store → Mumbai" nav |
-
-### Adding content
-
-```
-New industry  → add one object to lib/seo/data/industries.ts
-               → 1 hub entry + 182 city pages auto-generate
-
-New city      → add one object to lib/seo/data/cities.ts
-               → 38 new industry+city pages auto-generate
-
-New guide     → add one object to lib/seo/data/guides.ts
-               → 1 guide page auto-generates
-```
-
-No template changes. No new routes. Just data.
-
-> When URLs exceed 50,000, switch to `generateSitemaps()` (pattern documented in `app/sitemap.ts`).
-
----
-
-## Key architectural notes
-
-**PDF generation is server-side.** `@react-pdf/renderer` has persistent issues when bundled for the browser in Next.js 15. All PDF rendering happens in `GET /api/invoices/[id]/pdf` using `renderToBuffer`, which streams the bytes back to the client. The `canvas` webpack alias prevents bundling errors from the optional canvas dependency.
-
-**JWT sessions, not database sessions.** `lib/auth.ts` uses `strategy: "jwt"`. Every `auth()` call in an API route is a crypto check, not a DB query. This eliminates the Supabase free-tier wake-up latency on first load.
-
-**All app pages are static shells.** Every page under `app/(app)/` is `○ (Static)` — data fetches happen client-side via SWR. No server-rendering latency for authenticated routes.
-
----
 
 ## Scripts
 
 ```bash
-npm run dev          # Start dev server
-npm run build        # Production build
-npm run db:push      # Sync schema → Supabase
-npm run db:studio    # Open Prisma Studio
+npm run dev            # Start dev server
+npm run build          # Production build
+npm run db:push        # Sync Prisma schema → database
+npm run db:studio      # Open Prisma Studio GUI
+npm run db:generate    # Regenerate Prisma client
 ```
+
+## Roadmap
+
+- [ ] Multi-currency support
+- [ ] Email invoices directly to clients
+- [ ] Recurring invoices
+- [ ] Expense tracking
+- [ ] GST return export (GSTR-1)
+- [ ] Mobile-responsive invoice editor
+- [ ] Team/multi-user access
+- [ ] Invoice templates & customization
