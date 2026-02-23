@@ -54,8 +54,7 @@ export default function LoginPage() {
 
         <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed">
           By signing in you agree to our{" "}
-          <Link href="#" className="underline">Terms</Link> and{" "}
-          <Link href="#" className="underline">Privacy Policy</Link>
+          <Link href="/privacy" className="underline">Privacy Policy</Link>
         </p>
       </div>
 
