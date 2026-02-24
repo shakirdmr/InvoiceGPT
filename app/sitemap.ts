@@ -22,7 +22,6 @@ import { guideSlugs } from "@/lib/seo/data/guides";
  * multiple sitemaps using the generateSitemaps() pattern below.
  */
 
-const now = new Date().toISOString();
 const LAST_MODIFIED_STATIC = "2025-01-10T00:00:00.000Z";
 
 export default function sitemap(): MetadataRoute.Sitemap {

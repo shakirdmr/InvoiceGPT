@@ -17,6 +17,7 @@ export async function GET() {
 
   const clients = await prisma.client.findMany({
     where: { businessId: business.id },
+    include: { _count: { select: { invoices: true } } },
     orderBy: { name: "asc" },
   });
 
@@ -55,6 +56,7 @@ export async function POST(req: NextRequest) {
       state,
       pincode,
     },
+    include: { _count: { select: { invoices: true } } },
   });
 
   revalidateTag(cacheTags.clients(business.id));

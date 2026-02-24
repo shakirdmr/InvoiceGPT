@@ -1,17 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import Link from "next/link";
+import { NewClientDialog } from "@/components/dashboard/NewClientDialog";
 
 export function AddClientButton() {
-  return (
-    <Link href="/invoices/new">
-      <Button className="gap-2" size="sm">
-        <Plus className="w-4 h-4" />
-        <span className="hidden sm:inline">Add via Invoice</span>
-        <span className="sm:hidden">Add</span>
-      </Button>
-    </Link>
-  );
+  return <NewClientDialog />;
 }

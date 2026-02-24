@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { calcLineItem, calcInvoiceTotals, GST_RATES, numberToWords } from "@/lib/gst";
 import { formatCurrency, generateInvoiceNumber } from "@/lib/utils";
 import { useClients, useBusiness, useInvoices } from "@/lib/hooks";
+import { NewClientDialog } from "@/components/dashboard/NewClientDialog";
 
 interface LineItem {
   description: string;
@@ -346,6 +347,23 @@ export function InvoiceForm() {
                   )}
                   {showNewClient ? "Hide" : "+ New client"}
                 </button>
+
+                <NewClientDialog
+                  onClientCreated={(client) => {
+                    setSelectedClientId(client.id);
+                    setShowNewClient(false);
+                  }}
+                  trigger={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs h-auto px-2 py-1 text-gray-400 hover:text-gray-700 hover:bg-transparent"
+                    >
+                      Quick add
+                    </Button>
+                  }
+                />
 
                 {showNewClient && (
                   <div className="space-y-2">
