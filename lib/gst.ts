@@ -38,6 +38,8 @@ export function calcInvoiceTotals(
 }
 
 export function numberToWords(num: number): string {
+  if (num === 0) return "Rupees Zero Only";
+
   const a = [
     "",
     "One",

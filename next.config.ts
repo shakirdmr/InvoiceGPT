@@ -1,13 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // ── Webpack ───────────────────────────────────────────────────────────────
-  webpack: (config) => {
-    // Required by @react-pdf/renderer
-    config.resolve.alias.canvas = false;
-    return config;
-  },
-
   // ── Images ────────────────────────────────────────────────────────────────
   images: {
     remotePatterns: [

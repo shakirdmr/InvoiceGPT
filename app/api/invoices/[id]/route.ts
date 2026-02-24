@@ -17,6 +17,11 @@ export async function PATCH(
   const body = await req.json();
   const { status } = body;
 
+  const validStatuses = ["draft", "sent", "paid"];
+  if (!validStatuses.includes(status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
   const business = await prisma.business.findFirst({
     where: { userId: session.user.id },
   });
