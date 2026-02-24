@@ -18,8 +18,11 @@ export type Client = {
   name: string;
   gstin: string | null;
   phone: string | null;
-  address: string | null;
   email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
   _count: { invoices: number };
 };
 

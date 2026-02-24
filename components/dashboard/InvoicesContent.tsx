@@ -82,7 +82,13 @@ export function InvoicesContent() {
         <div className="space-y-3">
           {invoices?.map((inv) => (
             <Link key={inv.id} href={`/invoices/${inv.id}`}>
-              <div className="bg-white rounded-2xl border border-gray-100 p-4 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer active:scale-[0.99]">
+              <div className={`bg-white rounded-2xl border border-gray-100 p-4 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer active:scale-[0.99] border-l-4 ${
+                inv.status === "paid"
+                  ? "border-l-green-400"
+                  : inv.status === "sent"
+                  ? "border-l-yellow-400"
+                  : "border-l-gray-200"
+              }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">

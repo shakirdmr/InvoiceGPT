@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -15,14 +16,13 @@ import {
   Trash2,
   Download,
   Loader2,
-  ChevronDown,
-  ChevronUp,
+  ArrowLeft,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { calcLineItem, calcInvoiceTotals, GST_RATES, numberToWords } from "@/lib/gst";
-import { formatCurrency, generateInvoiceNumber } from "@/lib/utils";
-import { useClients, useBusiness, useInvoices } from "@/lib/hooks";
-import { NewClientDialog } from "@/components/dashboard/NewClientDialog";
+import { formatCurrency } from "@/lib/utils";
+import { useInvoice, useClients, useBusiness } from "@/lib/hooks";
 import { DownloadNameDialog } from "@/components/invoice/DownloadNameDialog";
 
 interface LineItem {
@@ -32,56 +32,50 @@ interface LineItem {
   gstRate: number;
 }
 
-const EMPTY_ITEM: LineItem = {
-  description: "",
-  quantity: 1,
-  rate: 0,
-  gstRate: 18,
-};
+const EMPTY_ITEM: LineItem = { description: "", quantity: 1, rate: 0, gstRate: 18 };
 
-export function InvoiceForm() {
+export function EditInvoiceForm() {
   const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const { data: invoice, isLoading: invoiceLoading } = useInvoice(id);
   const { data: clientsData } = useClients();
   const { data: business } = useBusiness();
-  const { data: invoicesData } = useInvoices();
 
   const clients = clientsData ?? [];
-  const businessName = business?.name ?? "";
 
-  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [pendingDownload, setPendingDownload] = useState<{
     invoiceId: string;
     suggestedName: string;
   } | null>(null);
 
-  // Client section
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
-  const [showNewClient, setShowNewClient] = useState(false);
-  const [newClient, setNewClient] = useState({
-    name: "",
-    gstin: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-  });
-
-  // Invoice details — number set once invoice count loads
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
-  useEffect(() => {
-    if (invoicesData !== undefined && invoiceNumber === "") {
-      setInvoiceNumber(generateInvoiceNumber(invoicesData.length));
-    }
-  }, [invoicesData, invoiceNumber]);
-  const [date, setDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [dueDate, setDueDate] = useState("");
   const [notes, setNotes] = useState("");
-
-  // Line items
   const [items, setItems] = useState<LineItem[]>([{ ...EMPTY_ITEM }]);
+
+  useEffect(() => {
+    if (invoice && !initialized) {
+      setInvoiceNumber(invoice.invoiceNumber);
+      setDate(invoice.date.split("T")[0]);
+      setDueDate(invoice.dueDate ? invoice.dueDate.split("T")[0] : "");
+      setNotes(invoice.notes ?? "");
+      setSelectedClientId(invoice.client?.id ?? "");
+      setItems(
+        invoice.items.map((item) => ({
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate,
+          gstRate: item.gstRate,
+        }))
+      );
+      setInitialized(true);
+    }
+  }, [invoice, initialized]);
 
   function addItem() {
     setItems((prev) => [...prev, { ...EMPTY_ITEM }]);
@@ -99,22 +93,17 @@ export function InvoiceForm() {
     });
   }
 
-  // Calculate totals
   const calculatedItems = items.map((item) =>
     calcLineItem(item.quantity, item.rate, item.gstRate)
   );
   const totals = calcInvoiceTotals(calculatedItems);
-
   const selectedClient = clients.find((c) => c.id === selectedClientId);
 
   async function doDownloadPDF(invoiceId: string, filename: string) {
     setGeneratingPdf(true);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/pdf`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error("Failed to generate PDF");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -122,13 +111,50 @@ export function InvoiceForm() {
       a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Invoice saved and PDF downloaded!");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      console.error("[PDF]", msg);
-      toast.error(`PDF failed: ${msg}`);
+      toast.success("PDF downloaded!");
+    } catch {
+      toast.error("Failed to download PDF");
     } finally {
       setGeneratingPdf(false);
+    }
+  }
+
+  async function handleSave() {
+    if (items.some((i) => !i.description.trim())) {
+      toast.error("All items need a description");
+      return;
+    }
+    if (items.some((i) => i.quantity <= 0 || i.rate < 0)) {
+      toast.error("Check item quantities and rates");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedClientId || null,
+          invoiceNumber,
+          date,
+          dueDate: dueDate || null,
+          notes,
+          items,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update invoice");
+
+      const clientName = selectedClient?.name ?? invoice?.client?.name;
+      setPendingDownload({
+        invoiceId: id,
+        suggestedName: `${invoiceNumber}${clientName ? ` - ${clientName}` : ""}.pdf`,
+      });
+    } catch {
+      toast.error("Failed to update invoice. Try again.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -140,86 +166,57 @@ export function InvoiceForm() {
   }
 
   function handleDownloadCancel() {
-    const invoiceId = pendingDownload?.invoiceId;
+    const invoiceId = pendingDownload?.invoiceId ?? id;
     setPendingDownload(null);
-    router.push(invoiceId ? `/invoices/${invoiceId}` : "/invoices");
-  }
-
-  async function handleSubmit() {
-    if (items.some((i) => !i.description.trim())) {
-      toast.error("All items need a description");
-      return;
-    }
-    if (items.some((i) => i.quantity <= 0 || i.rate < 0)) {
-      toast.error("Check item quantities and rates");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Create client if new
-      let clientId = selectedClientId;
-      if (showNewClient && newClient.name.trim()) {
-        const clientRes = await fetch("/api/clients", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(newClient),
-        });
-        if (clientRes.ok) {
-          const client = await clientRes.json();
-          clientId = client.id;
-        }
-      }
-
-      const payload = {
-        clientId: clientId || null,
-        invoiceNumber,
-        date,
-        dueDate: dueDate || null,
-        notes,
-        items,
-      };
-
-      const res = await fetch("/api/invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.status === 402) {
-        toast.error("Trial limit reached! Please subscribe to continue.");
-        router.push("/subscribe");
-        return;
-      }
-
-      if (!res.ok) throw new Error("Failed to save invoice");
-
-      const invoice = await res.json();
-
-      const clientName = selectedClient?.name ?? (showNewClient ? newClient.name : null);
-      setPendingDownload({
-        invoiceId: invoice.id,
-        suggestedName: `${invoiceNumber}${clientName ? ` - ${clientName}` : ""}.pdf`,
-      });
-    } catch {
-      toast.error("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
-    }
+    router.push(`/invoices/${invoiceId}`);
   }
 
   const fieldCls =
     "bg-transparent border-b border-dashed border-gray-300 hover:border-gray-400 focus:border-gray-900 focus:outline-none pb-0.5 min-w-0";
 
+  if (invoiceLoading || !initialized) {
+    return (
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto animate-pulse space-y-4">
+        <div className="h-8 w-48 bg-gray-200 rounded" />
+        <div className="h-64 bg-gray-100 rounded-2xl" />
+        <div className="h-48 bg-gray-100 rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="p-4 sm:p-6 max-w-3xl mx-auto text-center py-16">
+        <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+        <p className="text-gray-500">Invoice not found</p>
+        <Link href="/invoices" className="text-sm text-gray-400 underline mt-2 block">
+          Back to invoices
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 pb-10">
       <div className="max-w-3xl mx-auto">
 
-        {/* ── The Invoice Paper ── */}
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6">
+          <Link href={`/invoices/${id}`}>
+            <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+          </Link>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Edit Invoice</h1>
+            <p className="text-sm text-gray-400">{invoice.invoiceNumber}</p>
+          </div>
+        </div>
+
+        {/* Invoice Paper */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
 
-          {/* Section 1 — Business Header */}
+          {/* Business Header */}
           <div className="px-6 sm:px-8 pt-7 pb-6 border-b border-gray-100">
             {business ? (
               <div className="flex items-start justify-between gap-4">
@@ -258,19 +255,18 @@ export function InvoiceForm() {
               <div className="animate-pulse space-y-2">
                 <div className="h-5 bg-gray-100 rounded w-40" />
                 <div className="h-3 bg-gray-100 rounded w-28" />
-                <div className="h-3 bg-gray-100 rounded w-48" />
               </div>
             )}
           </div>
 
-          {/* Section 2 — TAX INVOICE title */}
+          {/* TAX INVOICE title */}
           <div className="py-4 text-center border-b border-gray-100">
             <span className="text-[11px] font-bold tracking-[0.25em] text-gray-900 uppercase">
               Tax Invoice
             </span>
           </div>
 
-          {/* Section 3 — Invoice Details + Bill To */}
+          {/* Invoice Details + Bill To */}
           <div className="px-6 sm:px-8 py-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-b border-gray-100">
 
             {/* Invoice Details */}
@@ -317,15 +313,13 @@ export function InvoiceForm() {
                 {clients.length > 0 && (
                   <Select
                     value={selectedClientId}
-                    onValueChange={(v) => {
-                      setSelectedClientId(v);
-                      if (v) setShowNewClient(false);
-                    }}
+                    onValueChange={setSelectedClientId}
                   >
                     <SelectTrigger className="bg-white text-xs h-8">
-                      <SelectValue placeholder="Select existing client..." />
+                      <SelectValue placeholder="Select client..." />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="">No client</SelectItem>
                       {clients.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
@@ -334,8 +328,7 @@ export function InvoiceForm() {
                     </SelectContent>
                   </Select>
                 )}
-
-                {selectedClient && !showNewClient && (
+                {selectedClient && (
                   <div className="space-y-0.5">
                     <div className="text-sm font-semibold text-gray-900">
                       {selectedClient.name}
@@ -351,93 +344,13 @@ export function InvoiceForm() {
                     )}
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowNewClient(!showNewClient);
-                    if (!showNewClient) setSelectedClientId("");
-                  }}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 transition-colors"
-                >
-                  {showNewClient ? (
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  )}
-                  {showNewClient ? "Hide" : "+ New client"}
-                </button>
-
-                <NewClientDialog
-                  onClientCreated={(client) => {
-                    setSelectedClientId(client.id);
-                    setShowNewClient(false);
-                  }}
-                  trigger={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-auto px-2 py-1 text-gray-400 hover:text-gray-700 hover:bg-transparent"
-                    >
-                      Quick add
-                    </Button>
-                  }
-                />
-
-                {showNewClient && (
-                  <div className="space-y-2">
-                    <input
-                      value={newClient.name}
-                      onChange={(e) => setNewClient((p) => ({ ...p, name: e.target.value }))}
-                      placeholder="Client name *"
-                      className="w-full text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        value={newClient.gstin}
-                        onChange={(e) => setNewClient((p) => ({ ...p, gstin: e.target.value }))}
-                        placeholder="GSTIN"
-                        className="text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400 uppercase"
-                      />
-                      <input
-                        value={newClient.phone}
-                        onChange={(e) => setNewClient((p) => ({ ...p, phone: e.target.value }))}
-                        placeholder="Phone"
-                        type="tel"
-                        className="text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400"
-                      />
-                    </div>
-                    <input
-                      value={newClient.address}
-                      onChange={(e) => setNewClient((p) => ({ ...p, address: e.target.value }))}
-                      placeholder="Address"
-                      className="w-full text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        value={newClient.city}
-                        onChange={(e) => setNewClient((p) => ({ ...p, city: e.target.value }))}
-                        placeholder="City"
-                        className="text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400"
-                      />
-                      <input
-                        value={newClient.state}
-                        onChange={(e) => setNewClient((p) => ({ ...p, state: e.target.value }))}
-                        placeholder="State"
-                        className="text-sm bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-gray-400"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          {/* Section 4 — Items */}
+          {/* Items */}
           <div className="px-6 sm:px-8 py-6 border-b border-gray-100">
 
-            {/* Desktop table header */}
             <div className="hidden sm:grid grid-cols-[24px_1fr_72px_96px_72px_96px_28px] gap-x-2 bg-gray-900 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-2.5 rounded-t-lg">
               <span className="text-center">#</span>
               <span>Description</span>
@@ -456,7 +369,6 @@ export function InvoiceForm() {
 
                 return (
                   <div key={index} className={index % 2 === 1 ? "sm:bg-gray-50/60" : ""}>
-
                     {/* Desktop row */}
                     <div className="hidden sm:grid grid-cols-[24px_1fr_72px_96px_72px_96px_28px] gap-x-2 items-center px-3 py-2.5">
                       <span className="text-center text-xs text-gray-400">{index + 1}</span>
@@ -517,7 +429,6 @@ export function InvoiceForm() {
                       )}
                     </div>
 
-                    {/* CGST/SGST hint — desktop only */}
                     {hasTax && (
                       <div className="hidden sm:flex justify-end gap-4 px-3 pb-2 -mt-1">
                         <span className="text-[10px] text-gray-400">
@@ -608,7 +519,6 @@ export function InvoiceForm() {
                         </span>
                       </div>
                     </div>
-
                   </div>
                 );
               })}
@@ -624,7 +534,7 @@ export function InvoiceForm() {
             </button>
           </div>
 
-          {/* Section 5 — Totals */}
+          {/* Totals */}
           <div className="px-6 sm:px-8 py-6 border-b border-gray-100">
             <div className="flex justify-end">
               <div className="w-64 space-y-1.5">
@@ -655,7 +565,7 @@ export function InvoiceForm() {
             </div>
           </div>
 
-          {/* Section 6 — Notes */}
+          {/* Notes */}
           <div className="px-6 sm:px-8 py-6">
             <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
               Notes / Terms
@@ -668,17 +578,16 @@ export function InvoiceForm() {
               className="w-full bg-transparent text-sm text-gray-600 placeholder:text-gray-300 border-none focus:outline-none resize-none"
             />
           </div>
-
         </div>
 
-        {/* Submit */}
+        {/* Save Button */}
         <Button
-          onClick={handleSubmit}
+          onClick={handleSave}
           size="lg"
           className="w-full mt-4 gap-2 h-12 text-base"
-          disabled={loading}
+          disabled={saving}
         >
-          {loading ? (
+          {saving ? (
             <Loader2 className="w-5 h-5 animate-spin" />
           ) : (
             <>
@@ -688,6 +597,7 @@ export function InvoiceForm() {
           )}
         </Button>
 
+        {/* Download Name Dialog */}
         <DownloadNameDialog
           open={pendingDownload !== null}
           defaultName={pendingDownload?.suggestedName ?? ""}

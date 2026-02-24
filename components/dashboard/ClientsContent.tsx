@@ -2,6 +2,7 @@
 
 import { Users, Phone, MapPin } from "lucide-react";
 import { AddClientButton } from "@/components/dashboard/AddClientButton";
+import { EditClientDialog } from "@/components/dashboard/EditClientDialog";
 import { useClients } from "@/lib/hooks";
 
 export function ClientsContent() {
@@ -79,9 +80,12 @@ export function ClientsContent() {
                     )}
                   </div>
                 </div>
-                <div className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
-                  {client._count.invoices} invoice
-                  {client._count.invoices !== 1 ? "s" : ""}
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full">
+                    {client._count.invoices} invoice
+                    {client._count.invoices !== 1 ? "s" : ""}
+                  </div>
+                  <EditClientDialog client={client} />
                 </div>
               </div>
               {(client.phone || client.address) && (

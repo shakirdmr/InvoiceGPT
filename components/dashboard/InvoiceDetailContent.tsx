@@ -88,7 +88,7 @@ export function InvoiceDetailContent() {
       </div>
 
       {/* Actions */}
-      <InvoiceActions invoice={invoice} />
+      <InvoiceActions invoice={{ ...invoice, clientName: invoice.client?.name }} />
 
       {/* Client */}
       {invoice.client && (
