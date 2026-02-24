@@ -70,15 +70,38 @@ function formatDate(iso: string): string {
 // PDF Generator
 // ---------------------------------------------------------------------------
 
-export function generateInvoicePDF(
+export async function generateInvoicePDF(
   invoice: InvoiceData,
   business: BusinessData,
-): Buffer {
+): Promise<Buffer> {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
+
+  // ── Logo (top-right) ─────────────────────────────────────────────────────
+  if (business.logoUrl) {
+    try {
+      const resp = await fetch(business.logoUrl);
+      if (resp.ok) {
+        const arrayBuf = await resp.arrayBuffer();
+        const base64 = Buffer.from(arrayBuf).toString("base64");
+        const mime = resp.headers.get("content-type") ?? "image/webp";
+        const logoSize = 20; // mm
+        doc.addImage(
+          `data:${mime};base64,${base64}`,
+          mime.includes("png") ? "PNG" : "JPEG",
+          pageWidth - margin - logoSize,
+          y,
+          logoSize,
+          logoSize,
+        );
+      }
+    } catch {
+      // logo fetch failed — continue without it
+    }
+  }
 
   // ── Header ───────────────────────────────────────────────────────────────
   doc.setFont("helvetica", "bold");
@@ -330,6 +353,6 @@ export function generateInvoicePDF(
   );
 
   // Return as Buffer
-  const arrayBuf = doc.output("arraybuffer");
-  return Buffer.from(arrayBuf);
+  const outBuf = doc.output("arraybuffer");
+  return Buffer.from(outBuf);
 }

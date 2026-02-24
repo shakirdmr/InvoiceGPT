@@ -91,13 +91,23 @@ export function SettingsForm({
     setCropSrc(null);
     setLogoLoading(true);
     try {
+      // 1. Upload to storage
       const fd = new FormData();
       fd.append("file", new File([blob], "logo.webp", { type: "image/webp" }));
       const res = await fetch("/api/upload-logo", { method: "POST", body: fd });
       if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
       const { url } = await res.json();
+
+      // 2. Immediately persist to DB so it survives page refresh
+      const currentForm = { ...form, logoUrl: url };
+      await fetch("/api/business", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentForm),
+      });
+
       setForm((p) => ({ ...p, logoUrl: url }));
-      toast.success("Logo uploaded!");
+      toast.success("Logo saved!");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Logo upload failed");
     } finally {

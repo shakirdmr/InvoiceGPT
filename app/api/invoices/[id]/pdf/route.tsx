@@ -60,7 +60,7 @@ export async function GET(
   };
 
   try {
-    const buffer = generateInvoicePDF(invoiceData, {
+    const buffer = await generateInvoicePDF(invoiceData, {
       name: business.name,
       gstin: business.gstin,
       address: business.address,
