@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
-import { uploadLogo } from "@/lib/supabase";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { TRIAL_INVOICE_LIMIT } from "@/lib/razorpay";
@@ -92,13 +91,15 @@ export function SettingsForm({
     setCropSrc(null);
     setLogoLoading(true);
     try {
-      const croppedFile = new File([blob], "logo.webp", { type: "image/webp" });
-      const url = await uploadLogo(croppedFile, userEmail);
-      if (!url) throw new Error();
+      const fd = new FormData();
+      fd.append("file", new File([blob], "logo.webp", { type: "image/webp" }));
+      const res = await fetch("/api/upload-logo", { method: "POST", body: fd });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Upload failed");
+      const { url } = await res.json();
       setForm((p) => ({ ...p, logoUrl: url }));
       toast.success("Logo uploaded!");
-    } catch {
-      toast.error("Logo upload failed");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Logo upload failed");
     } finally {
       setLogoLoading(false);
     }
