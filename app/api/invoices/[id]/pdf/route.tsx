@@ -1,10 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { renderToBuffer } from "@react-pdf/renderer";
-import type { DocumentProps } from "@react-pdf/renderer";
-import { InvoicePDF } from "@/components/pdf/InvoicePDF";
-import React from "react";
+import { generateInvoicePDF } from "@/lib/generate-pdf";
 
 export async function GET(
   _req: NextRequest,
@@ -41,7 +38,7 @@ export async function GET(
     cgstTotal: invoice.cgstTotal,
     sgstTotal: invoice.sgstTotal,
     total: invoice.total,
-    items: invoice.items.map((item) => ({
+    items: invoice.items.map((item: typeof invoice.items[number]) => ({
       description: item.description,
       quantity: item.quantity,
       rate: item.rate,
@@ -62,13 +59,8 @@ export async function GET(
       : null,
   };
 
-  // Call InvoicePDF as a plain function to get the <Document> element directly.
-  // This avoids JSX wrapper components which can cause React reconciler issues
-  // when renderToBuffer processes the element tree.
-  const docElement = InvoicePDF({
-    invoice: invoiceData,
-    businessName: business.name,
-    business: {
+  try {
+    const buffer = generateInvoicePDF(invoiceData, {
       name: business.name,
       gstin: business.gstin,
       address: business.address,
@@ -77,11 +69,8 @@ export async function GET(
       phone: business.phone,
       email: business.email,
       logoUrl: business.logoUrl,
-    },
-  }) as unknown as React.ReactElement<DocumentProps>;
+    });
 
-  try {
-    const buffer = await renderToBuffer(docElement);
     return new Response(new Uint8Array(buffer), {
       headers: {
         "Content-Type": "application/pdf",
@@ -90,7 +79,7 @@ export async function GET(
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[PDF route] renderToBuffer failed:", err);
+    console.error("[PDF route] generateInvoicePDF failed:", err);
     return new Response(JSON.stringify({ error: msg }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

@@ -21,7 +21,10 @@ export function InvoiceActions({ invoice }: InvoiceActionsProps) {
     setDownloading(true);
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/pdf`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
