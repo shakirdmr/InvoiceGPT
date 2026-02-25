@@ -29,6 +29,9 @@ export default function MarketingLayout({
             <span className="font-bold text-gray-900">InvoiceGPT</span>
           </Link>
           <div className="flex items-center gap-3">
+            <Link href="/about" className="hidden sm:block text-sm text-gray-600 hover:text-gray-900">
+              About
+            </Link>
             <Link href="/guides" className="hidden sm:block text-sm text-gray-600 hover:text-gray-900">
               Guides
             </Link>
@@ -93,8 +96,8 @@ export default function MarketingLayout({
           <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
             <p>© {new Date().getFullYear()} InvoiceGPT. Made with ❤️ for Indian shopkeepers.</p>
             <div className="flex gap-4">
-              <Link href="#" className="hover:text-gray-700">Terms</Link>
-              <Link href="#" className="hover:text-gray-700">Privacy</Link>
+              <Link href="/about" className="hover:text-gray-700">About</Link>
+              <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
             </div>
           </div>
         </div>

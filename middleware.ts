@@ -9,6 +9,8 @@ const PUBLIC_PATHS = [
   // Programmatic SEO & marketing pages — no auth required
   "/gst-invoice",
   "/guides",
+  "/about",
+  "/privacy",
   "/sitemap.xml",
   "/robots.txt",
 ];

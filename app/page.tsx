@@ -439,8 +439,8 @@ export default function LandingPage() {
           </div>
           <p>© 2025 InvoiceGPT. Made with ❤️ for Indian shopkeepers.</p>
           <div className="flex gap-4 text-xs">
-            <Link href="#" className="hover:text-gray-700">Terms</Link>
-            <Link href="#" className="hover:text-gray-700">Privacy</Link>
+            <Link href="/about" className="hover:text-gray-700">About</Link>
+            <Link href="/privacy" className="hover:text-gray-700">Privacy</Link>
           </div>
         </div>
       </footer>
