@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
+  // ── Workspace root ──────────────────────────────────────────────────────
+  // Fix: parent directory has a package-lock.json + node_modules that confuses
+  // Next.js workspace detection. Explicitly set root to this project directory.
+  outputFileTracingRoot: path.join(__dirname),
+
   // ── Images ────────────────────────────────────────────────────────────────
   images: {
     remotePatterns: [
