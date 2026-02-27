@@ -70,6 +70,20 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
       },
+      animation: {
+        "gradient-shift": "gradient-shift 8s ease infinite",
+        "float-particle": "float-particle 6s ease-in-out infinite",
+      },
+      keyframes: {
+        "gradient-shift": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+        "float-particle": {
+          "0%, 100%": { transform: "translateY(0px) translateX(0px)", opacity: "0.3" },
+          "50%": { transform: "translateY(-20px) translateX(10px)", opacity: "0.6" },
+        },
+      },
     },
   },
   plugins: [tailwindcssAnimate],
